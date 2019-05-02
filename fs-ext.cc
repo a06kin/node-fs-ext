@@ -46,9 +46,10 @@ using namespace node;
 
 #define THROW_BAD_ARGS Nan::ThrowTypeError("Bad argument")
 
-struct store_data_t {
+struct store_data_t
+{
   Nan::Callback *cb;
-  int fs_op;  // operation type within this module
+  int fs_op; // operation type within this module
   int fd;
   int oper;
   int arg;
@@ -76,10 +77,10 @@ static Nan::Persistent<String> f_ffree_symbol;
 #endif
 
 #ifdef _WIN32
-  #define LOCK_SH 1
-  #define LOCK_EX 2
-  #define LOCK_NB 4
-  #define LOCK_UN 8
+#define LOCK_SH 1
+#define LOCK_EX 2
+#define LOCK_NB 4
+#define LOCK_UN 8
 #endif
 
 enum
@@ -92,7 +93,8 @@ enum
 #endif
 };
 
-static void EIO_After(uv_work_t *req) {
+static void EIO_After(uv_work_t *req)
+{
   Nan::HandleScope scope;
 
   store_data_t *store_data = static_cast<store_data_t *>(req->data);
@@ -105,49 +107,53 @@ static void EIO_After(uv_work_t *req) {
   Local<Object> statvfs_result;
   // NOTE: This may need to be changed if something returns a -1
   // for a success, which is possible.
-  if (store_data->result == -1) {
+  if (store_data->result == -1)
+  {
     // If the request doesn't have a path parameter set.
     argv[0] = Nan::ErrnoException(store_data->error, "EIO_After", "");
-  } else {
+  }
+  else
+  {
     // error value is empty or null for non-error.
     argv[0] = Nan::Null();
 
-    switch (store_data->fs_op) {
-      // These operations have no data to pass other than "error".
-      case FS_OP_FLOCK:
-        argc = 1;
-        break;
+    switch (store_data->fs_op)
+    {
+    // These operations have no data to pass other than "error".
+    case FS_OP_FLOCK:
+      argc = 1;
+      break;
 
-      case FS_OP_SEEK:
-        argc = 2;
-        argv[1] = Nan::New<Number>(static_cast<double>(store_data->offset));
-        break;
-      case FS_OP_STATVFS:
+    case FS_OP_SEEK:
+      argc = 2;
+      argv[1] = Nan::New<Number>(static_cast<double>(store_data->offset));
+      break;
+    case FS_OP_STATVFS:
 #ifndef _WIN32
-        argc = 2;
-        statvfs_result = Nan::New<Object>();
-        argv[1] = statvfs_result;
-        statvfs_result->Set(Nan::New<String>(f_namemax_symbol), Nan::New<Integer>(static_cast<uint32_t>(store_data->statvfs_buf.f_namemax)));
-        statvfs_result->Set(Nan::New<String>(f_bsize_symbol), Nan::New<Integer>(static_cast<uint32_t>(store_data->statvfs_buf.f_bsize)));
-        statvfs_result->Set(Nan::New<String>(f_frsize_symbol), Nan::New<Integer>(static_cast<uint32_t>(store_data->statvfs_buf.f_frsize)));
-        statvfs_result->Set(Nan::New<String>(f_blocks_symbol), Nan::New<Number>(store_data->statvfs_buf.f_blocks));
-        statvfs_result->Set(Nan::New<String>(f_bavail_symbol), Nan::New<Number>(store_data->statvfs_buf.f_bavail));
-        statvfs_result->Set(Nan::New<String>(f_bfree_symbol), Nan::New<Number>(store_data->statvfs_buf.f_bfree));
-        statvfs_result->Set(Nan::New<String>(f_files_symbol), Nan::New<Number>(store_data->statvfs_buf.f_files));
-        statvfs_result->Set(Nan::New<String>(f_favail_symbol), Nan::New<Number>(store_data->statvfs_buf.f_favail));
-        statvfs_result->Set(Nan::New<String>(f_ffree_symbol), Nan::New<Number>(store_data->statvfs_buf.f_ffree));
+      argc = 2;
+      statvfs_result = Nan::New<Object>();
+      argv[1] = statvfs_result;
+      statvfs_result->Set(Nan::New<String>(f_namemax_symbol), Nan::New<Integer>(static_cast<uint32_t>(store_data->statvfs_buf.f_namemax)));
+      statvfs_result->Set(Nan::New<String>(f_bsize_symbol), Nan::New<Integer>(static_cast<uint32_t>(store_data->statvfs_buf.f_bsize)));
+      statvfs_result->Set(Nan::New<String>(f_frsize_symbol), Nan::New<Integer>(static_cast<uint32_t>(store_data->statvfs_buf.f_frsize)));
+      statvfs_result->Set(Nan::New<String>(f_blocks_symbol), Nan::New<Number>(store_data->statvfs_buf.f_blocks));
+      statvfs_result->Set(Nan::New<String>(f_bavail_symbol), Nan::New<Number>(store_data->statvfs_buf.f_bavail));
+      statvfs_result->Set(Nan::New<String>(f_bfree_symbol), Nan::New<Number>(store_data->statvfs_buf.f_bfree));
+      statvfs_result->Set(Nan::New<String>(f_files_symbol), Nan::New<Number>(store_data->statvfs_buf.f_files));
+      statvfs_result->Set(Nan::New<String>(f_favail_symbol), Nan::New<Number>(store_data->statvfs_buf.f_favail));
+      statvfs_result->Set(Nan::New<String>(f_ffree_symbol), Nan::New<Number>(store_data->statvfs_buf.f_ffree));
 #else
-        argc = 1;
+      argc = 1;
 #endif
-        break;
+      break;
 #ifndef _WIN32
-      case FS_OP_FCNTL:
-        argc = 2;
-        argv[1] = Nan::New<Number>(store_data->result);
-        break;
+    case FS_OP_FCNTL:
+      argc = 2;
+      argv[1] = Nan::New<Number>(store_data->result);
+      break;
 #endif
-      default:
-        assert(0 && "Unhandled op type value");
+    default:
+      assert(0 && "Unhandled op type value");
     }
   }
 
@@ -156,7 +162,8 @@ static void EIO_After(uv_work_t *req) {
   Nan::AsyncResource async_resource("fs-ext:EIO_After");
   store_data->cb->Call(argc, argv, &async_resource);
 
-  if (try_catch.HasCaught()) {
+  if (try_catch.HasCaught())
+  {
     Nan::FatalException(try_catch);
   }
 
@@ -166,14 +173,16 @@ static void EIO_After(uv_work_t *req) {
   delete req;
 }
 
-static void EIO_StatVFS(uv_work_t *req) {
-  store_data_t* statvfs_data = static_cast<store_data_t *>(req->data);
+static void EIO_StatVFS(uv_work_t *req)
+{
+  store_data_t *statvfs_data = static_cast<store_data_t *>(req->data);
   statvfs_data->result = 0;
 #ifndef _WIN32
   struct statvfs *data = &(statvfs_data->statvfs_buf);
-  if (statvfs(statvfs_data->path, data)) {
+  if (statvfs(statvfs_data->path, data))
+  {
     statvfs_data->result = -1;
-  	memset(data, 0, sizeof(struct statvfs));
+    memset(data, 0, sizeof(struct statvfs));
   };
 #endif
   free(statvfs_data->path);
@@ -181,36 +190,40 @@ static void EIO_StatVFS(uv_work_t *req) {
 }
 
 #ifdef _WIN32
-static off_t _win32_lseek(int fd, off_t offset, int whence) {
+static off_t _win32_lseek(int fd, off_t offset, int whence)
+{
   HANDLE fh;
   LARGE_INTEGER new_offset;
 
   fh = (HANDLE)uv_get_osfhandle(fd);
-  if (fh == (HANDLE)-1) {
+  if (fh == (HANDLE)-1)
+  {
     errno = EBADF;
     return -1;
   }
 
   DWORD method;
-  switch (whence) {
+  switch (whence)
+  {
   case SEEK_SET:
-      method = FILE_BEGIN;
-      break;
+    method = FILE_BEGIN;
+    break;
   case SEEK_CUR:
-      method = FILE_CURRENT;
-      break;
+    method = FILE_CURRENT;
+    break;
   case SEEK_END:
-      method = FILE_END;
-      break;
+    method = FILE_END;
+    break;
   default:
-      errno = EINVAL;
-      return -1;
+    errno = EINVAL;
+    return -1;
   }
 
   LARGE_INTEGER distance;
   distance.QuadPart = offset;
 
-  if (SetFilePointerEx(fh, distance, &new_offset, method)) {
+  if (SetFilePointerEx(fh, distance, &new_offset, method))
+  {
     return new_offset.QuadPart;
   }
 
@@ -219,8 +232,9 @@ static off_t _win32_lseek(int fd, off_t offset, int whence) {
 }
 #endif
 
-static void EIO_Seek(uv_work_t *req) {
-  store_data_t* seek_data = static_cast<store_data_t *>(req->data);
+static void EIO_Seek(uv_work_t *req)
+{
+  store_data_t *seek_data = static_cast<store_data_t *>(req->data);
 
 #ifdef _WIN32
   off_t offs = _win32_lseek(seek_data->fd, seek_data->offset, seek_data->oper);
@@ -228,95 +242,108 @@ static void EIO_Seek(uv_work_t *req) {
   off_t offs = lseek(seek_data->fd, seek_data->offset, seek_data->oper);
 #endif
 
-  if (offs == -1) {
+  if (offs == -1)
+  {
     seek_data->result = -1;
     seek_data->error = errno;
-  } else {
+  }
+  else
+  {
     seek_data->offset = offs;
   }
-
 }
 
 #ifndef _WIN32
-static void EIO_Fcntl(uv_work_t *req) {
-  store_data_t* data = static_cast<store_data_t *>(req->data);
-  
+static void EIO_Fcntl(uv_work_t *req)
+{
+  store_data_t *data = static_cast<store_data_t *>(req->data);
+
   struct flock lk;
   lk.l_start = 0;
   lk.l_len = 0;
   lk.l_type = 0;
   lk.l_whence = 0;
   lk.l_pid = 0;
-  
+
   int result = -1;
-  if (data->oper == F_GETLK || data->oper == F_SETLK || data->oper == F_SETLKW) {
-	if (data->oper == F_SETLK || data->oper == F_SETLKW) {
-		lk.l_whence = SEEK_SET;
-		lk.l_type   = data->arg;
-	}
-	data->result = result = fcntl(data->fd, data->oper, &lk); 
-  } else {
-  	data->result = result = fcntl(data->fd, data->oper, data->arg);
+  if (data->oper == F_GETLK || data->oper == F_SETLK || data->oper == F_SETLKW)
+  {
+    if (data->oper == F_SETLK || data->oper == F_SETLKW)
+    {
+      lk.l_whence = SEEK_SET;
+      lk.l_type = data->arg;
+    }
+    data->result = result = fcntl(data->fd, data->oper, &lk);
   }
-  if (result == -1) {
-   	data->error = errno;
+  else
+  {
+    data->result = result = fcntl(data->fd, data->oper, data->arg);
+  }
+  if (result == -1)
+  {
+    data->error = errno;
   }
 }
 #endif
 
 #ifdef _WIN32
 
-static void uv__crt_invalid_parameter_handler(const wchar_t* expression,
-    const wchar_t* function, const wchar_t * file, unsigned int line,
-    uintptr_t reserved) {
+static void uv__crt_invalid_parameter_handler(const wchar_t *expression,
+                                              const wchar_t *function, const wchar_t *file, unsigned int line,
+                                              uintptr_t reserved)
+{
   /* No-op. */
 }
 
-#define LK_LEN          0xffff0000
+#define LK_LEN 0xffff0000
 
-static int _win32_flock(int fd, int oper) {
+static int _win32_flock(int fd, int oper)
+{
   OVERLAPPED o;
   HANDLE fh;
 
   int i = -1;
 
   fh = (HANDLE)uv_get_osfhandle(fd);
-  if (fh == (HANDLE)-1) {
+  if (fh == (HANDLE)-1)
+  {
     errno = EBADF;
     return -1;
   }
 
   memset(&o, 0, sizeof(o));
 
-  switch(oper) {
-  case LOCK_SH:               /* shared lock */
-      if (LockFileEx(fh, 0, 0, LK_LEN, 0, &o))
-        i = 0;
-      break;
-  case LOCK_EX:               /* exclusive lock */
-      if (LockFileEx(fh, LOCKFILE_EXCLUSIVE_LOCK, 0, LK_LEN, 0, &o))
-        i = 0;
-      break;
-  case LOCK_SH|LOCK_NB:       /* non-blocking shared lock */
-      if (LockFileEx(fh, LOCKFILE_FAIL_IMMEDIATELY, 0, LK_LEN, 0, &o))
-        i = 0;
-      break;
-  case LOCK_EX|LOCK_NB:       /* non-blocking exclusive lock */
-      if (LockFileEx(fh, LOCKFILE_EXCLUSIVE_LOCK|LOCKFILE_FAIL_IMMEDIATELY,
-                     0, LK_LEN, 0, &o))
-        i = 0;
-      break;
-  case LOCK_UN:               /* unlock lock */
-      if (UnlockFileEx(fh, 0, LK_LEN, 0, &o) ||
-          GetLastError() == ERROR_NOT_LOCKED)
-        i = 0;
-      break;
-  default:                    /* unknown */
-      errno = EINVAL;
-      return -1;
+  switch (oper)
+  {
+  case LOCK_SH: /* shared lock */
+    if (LockFileEx(fh, 0, 0, LK_LEN, 0, &o))
+      i = 0;
+    break;
+  case LOCK_EX: /* exclusive lock */
+    if (LockFileEx(fh, LOCKFILE_EXCLUSIVE_LOCK, 0, LK_LEN, 0, &o))
+      i = 0;
+    break;
+  case LOCK_SH | LOCK_NB: /* non-blocking shared lock */
+    if (LockFileEx(fh, LOCKFILE_FAIL_IMMEDIATELY, 0, LK_LEN, 0, &o))
+      i = 0;
+    break;
+  case LOCK_EX | LOCK_NB: /* non-blocking exclusive lock */
+    if (LockFileEx(fh, LOCKFILE_EXCLUSIVE_LOCK | LOCKFILE_FAIL_IMMEDIATELY,
+                   0, LK_LEN, 0, &o))
+      i = 0;
+    break;
+  case LOCK_UN: /* unlock lock */
+    if (UnlockFileEx(fh, 0, LK_LEN, 0, &o) ||
+        GetLastError() == ERROR_NOT_LOCKED)
+      i = 0;
+    break;
+  default: /* unknown */
+    errno = EINVAL;
+    return -1;
   }
-  if (i == -1) {
-    if (GetLastError() == ERROR_LOCK_VIOLATION) 
+  if (i == -1)
+  {
+    if (GetLastError() == ERROR_LOCK_VIOLATION)
       errno = EWOULDBLOCK;
     else
       errno = EINVAL;
@@ -325,8 +352,9 @@ static int _win32_flock(int fd, int oper) {
 }
 #endif
 
-static void EIO_Flock(uv_work_t *req) {
-  store_data_t* flock_data = static_cast<store_data_t *>(req->data);
+static void EIO_Flock(uv_work_t *req)
+{
+  store_data_t *flock_data = static_cast<store_data_t *>(req->data);
 
 #ifdef _WIN32
   int i = _win32_flock(flock_data->fd, flock_data->oper);
@@ -336,87 +364,102 @@ static void EIO_Flock(uv_work_t *req) {
 
   flock_data->result = i;
   flock_data->error = errno;
-
 }
 
-static NAN_METHOD(Flock) {
-  if (info.Length() < 2 || !info[0]->IsInt32() || !info[1]->IsInt32()) {
+static NAN_METHOD(Flock)
+{
+  if (info.Length() < 2 || !info[0]->IsInt32() || !info[1]->IsInt32())
+  {
     return THROW_BAD_ARGS;
   }
 
-  store_data_t* flock_data = new store_data_t();
+  v8::Local<v8::Context> context = Nan::GetCurrentContext();
+
+  store_data_t *flock_data = new store_data_t();
 
   flock_data->fs_op = FS_OP_FLOCK;
-  flock_data->fd = info[0]->Int32Value();
-  flock_data->oper = info[1]->Int32Value();
+  flock_data->fd = info[0]->Int32Value(context).FromJust();
+  flock_data->oper = info[1]->Int32Value(context).FromJust();
 
-  if (info[2]->IsFunction()) {
-    flock_data->cb = new Nan::Callback((Local<Function>) info[2].As<Function>());
+  if (info[2]->IsFunction())
+  {
+    flock_data->cb = new Nan::Callback((Local<Function>)info[2].As<Function>());
     uv_work_t *req = new uv_work_t;
     req->data = flock_data;
     uv_queue_work(uv_default_loop(), req, EIO_Flock, (uv_after_work_cb)EIO_After);
     info.GetReturnValue().SetUndefined();
-  } else {
+  }
+  else
+  {
 #ifdef _WIN32
     int i = _win32_flock(flock_data->fd, flock_data->oper);
 #else
     int i = flock(flock_data->fd, flock_data->oper);
 #endif
     delete flock_data;
-    if (i != 0) return Nan::ThrowError(Nan::ErrnoException(errno, "Flock", ""));
+    if (i != 0)
+      return Nan::ThrowError(Nan::ErrnoException(errno, "Flock", ""));
     info.GetReturnValue().SetUndefined();
   }
 }
 
-
 #ifdef _LARGEFILE_SOURCE
-static inline int IsInt64(double x) {
+static inline int IsInt64(double x)
+{
   return x == static_cast<double>(static_cast<int64_t>(x));
 }
 #endif
 
 #ifndef _LARGEFILE_SOURCE
-#define ASSERT_OFFSET(a) \
-  if (!(a)->IsUndefined() && !(a)->IsNull() && !(a)->IsInt32()) { \
-    return Nan::ThrowTypeError("Not an integer"); \
+#define ASSERT_OFFSET(a)                                        \
+  if (!(a)->IsUndefined() && !(a)->IsNull() && !(a)->IsInt32()) \
+  {                                                             \
+    return Nan::ThrowTypeError("Not an integer");               \
   }
-#define GET_OFFSET(a) ((a)->IsNumber() ? (a)->Int32Value() : -1)
+#define GET_OFFSET(a) ((a)->IsNumber() ? (a)->Int32Value(Nan::GetCurrentContext()).FromJust() : -1)
 #else
-#define ASSERT_OFFSET(a) \
-  if (!(a)->IsUndefined() && !(a)->IsNull() && !IsInt64((a)->NumberValue())) { \
-    return Nan::ThrowTypeError("Not an integer"); \
+#define ASSERT_OFFSET(a)                                                                                        \
+  if (!(a)->IsUndefined() && !(a)->IsNull() && !IsInt64((a)->NumberValue(Nan::GetCurrentContext()).FromJust())) \
+  {                                                                                                             \
+    return Nan::ThrowTypeError("Not an integer");                                                               \
   }
-#define GET_OFFSET(a) ((a)->IsNumber() ? (a)->IntegerValue() : -1)
+#define GET_OFFSET(a) ((a)->IsNumber() ? (a)->IntegerValue(Nan::GetCurrentContext()).FromJust() : -1)
 #endif
 
 //  fs.seek(fd, position, whence [, callback] )
 
-static NAN_METHOD(Seek) {
+static NAN_METHOD(Seek)
+{
   if (info.Length() < 3 ||
-     !info[0]->IsInt32() ||
-     !info[2]->IsInt32()) {
+      !info[0]->IsInt32() ||
+      !info[2]->IsInt32())
+  {
     return THROW_BAD_ARGS;
   }
 
-  int fd = info[0]->Int32Value();
+  v8::Local<v8::Context> context = Nan::GetCurrentContext();
+
+  int fd = info[0]->Int32Value(context).FromJust();
   ASSERT_OFFSET(info[1]);
   off_t offs = GET_OFFSET(info[1]);
-  int whence = info[2]->Int32Value();
+  int whence = info[2]->Int32Value(context).FromJust();
 
-  if ( ! info[3]->IsFunction()) {
+  if (!info[3]->IsFunction())
+  {
 #ifdef _WIN32
     off_t offs_result = _win32_lseek(fd, offs, whence);
 #else
     off_t offs_result = lseek(fd, offs, whence);
 #endif
-    if (offs_result == -1) return Nan::ThrowError(Nan::ErrnoException(errno, "Seek", ""));
+    if (offs_result == -1)
+      return Nan::ThrowError(Nan::ErrnoException(errno, "Seek", ""));
     info.GetReturnValue().Set(Nan::New<Number>(static_cast<double>(offs_result)));
     return;
   }
 
-  store_data_t* seek_data = new store_data_t();
+  store_data_t *seek_data = new store_data_t();
 
-  seek_data->cb = new Nan::Callback((Local<Function>) info[3].As<Function>());
+  seek_data->cb = new Nan::Callback((Local<Function>)info[3].As<Function>());
   seek_data->fs_op = FS_OP_SEEK;
   seek_data->fd = fd;
   seek_data->offset = offs;
@@ -432,28 +475,34 @@ static NAN_METHOD(Seek) {
 //  fs.fcntl(fd, cmd, [arg])
 
 #ifndef _WIN32
-static NAN_METHOD(Fcntl) {
+static NAN_METHOD(Fcntl)
+{
   if (info.Length() < 3 ||
-     !info[0]->IsInt32() ||
-     !info[1]->IsInt32() ||
-     !info[2]->IsInt32()) {
+      !info[0]->IsInt32() ||
+      !info[1]->IsInt32() ||
+      !info[2]->IsInt32())
+  {
     return THROW_BAD_ARGS;
   }
 
-  int fd = info[0]->Int32Value();
-  int cmd = info[1]->Int32Value();
-  int arg = info[2]->Int32Value();
+  v8::Local<v8::Context> context = Nan::GetCurrentContext();
 
-  if ( ! info[3]->IsFunction()) {
+  int fd = info[0]->Int32Value(context).FromJust();
+  int cmd = info[1]->Int32Value(context).FromJust();
+  int arg = info[2]->Int32Value(context).FromJust();
+
+  if (!info[3]->IsFunction())
+  {
     int result = fcntl(fd, cmd, arg);
-    if (result == -1) return Nan::ThrowError(Nan::ErrnoException(errno, "Fcntl", ""));
+    if (result == -1)
+      return Nan::ThrowError(Nan::ErrnoException(errno, "Fcntl", ""));
     info.GetReturnValue().Set(Nan::New<Number>(result));
     return;
   }
 
-  store_data_t* data = new store_data_t();
+  store_data_t *data = new store_data_t();
 
-  data->cb = new Nan::Callback((Local<Function>) info[3].As<Function>());
+  data->cb = new Nan::Callback((Local<Function>)info[3].As<Function>());
   data->fs_op = FS_OP_FCNTL;
   data->fd = fd;
   data->oper = cmd;
@@ -470,20 +519,24 @@ static NAN_METHOD(Fcntl) {
 // Wrapper for statvfs(2).
 //   fs.statVFS( path, [callback] )
 
-static NAN_METHOD(StatVFS) {
+static NAN_METHOD(StatVFS)
+{
   if (info.Length() < 1 ||
-      !info[0]->IsString() ) {
+      !info[0]->IsString())
+  {
     return THROW_BAD_ARGS;
   }
 
-  Nan::Utf8String path(info[0]->ToString());
+  Nan::Utf8String path(info[0]->ToString(Nan::GetCurrentContext()).FromMaybe(v8::Local<v8::String>()));
 
   // Synchronous call needs much less work
-  if (!info[1]->IsFunction()) {
+  if (!info[1]->IsFunction())
+  {
 #ifndef _WIN32
     struct statvfs buf;
     int ret = statvfs(*path, &buf);
-    if (ret != 0) return Nan::ThrowError(Nan::ErrnoException(errno, "statvfs", "", *path));
+    if (ret != 0)
+      return Nan::ThrowError(Nan::ErrnoException(errno, "statvfs", "", *path));
     Local<Object> result = Nan::New<Object>();
     result->Set(Nan::New<String>(f_namemax_symbol), Nan::New<Integer>(static_cast<uint32_t>(buf.f_namemax)));
     result->Set(Nan::New<String>(f_bsize_symbol), Nan::New<Integer>(static_cast<uint32_t>(buf.f_bsize)));
@@ -503,21 +556,20 @@ static NAN_METHOD(StatVFS) {
     return;
   }
 
-  store_data_t* statvfs_data = new store_data_t();
+  store_data_t *statvfs_data = new store_data_t();
 
-  statvfs_data->cb = new Nan::Callback((Local<Function>) info[1].As<Function>());
+  statvfs_data->cb = new Nan::Callback((Local<Function>)info[1].As<Function>());
   statvfs_data->fs_op = FS_OP_STATVFS;
   statvfs_data->path = strdup(*path);
 
   uv_work_t *req = new uv_work_t;
   req->data = statvfs_data;
-  uv_queue_work(uv_default_loop(), req, EIO_StatVFS,(uv_after_work_cb)EIO_After);
+  uv_queue_work(uv_default_loop(), req, EIO_StatVFS, (uv_after_work_cb)EIO_After);
 
   info.GetReturnValue().SetUndefined();
 }
 
-extern "C"
-NAN_MODULE_INIT(init)
+extern "C" NAN_MODULE_INIT(init)
 {
   Nan::HandleScope scope;
 
@@ -588,12 +640,12 @@ NAN_MODULE_INIT(init)
 #ifdef F_SETLKW
   NODE_DEFINE_CONSTANT(target, F_SETLKW);
 #endif
-  target->Set(Nan::New<String>("seek").ToLocalChecked(), Nan::New<FunctionTemplate>(Seek)->GetFunction());
+  target->Set(Nan::New<String>("seek").ToLocalChecked(), Nan::New<FunctionTemplate>(Seek)->GetFunction(Nan::GetCurrentContext()).ToLocalChecked());
 #ifndef _WIN32
-  target->Set(Nan::New<String>("fcntl").ToLocalChecked(), Nan::New<FunctionTemplate>(Fcntl)->GetFunction());
+  target->Set(Nan::New<String>("fcntl").ToLocalChecked(), Nan::New<FunctionTemplate>(Fcntl)->GetFunction(Nan::GetCurrentContext()).ToLocalChecked());
 #endif
-  target->Set(Nan::New<String>("flock").ToLocalChecked(), Nan::New<FunctionTemplate>(Flock)->GetFunction());
-  target->Set(Nan::New<String>("statVFS").ToLocalChecked(), Nan::New<FunctionTemplate>(StatVFS)->GetFunction());
+  target->Set(Nan::New<String>("flock").ToLocalChecked(), Nan::New<FunctionTemplate>(Flock)->GetFunction(Nan::GetCurrentContext()).ToLocalChecked());
+  target->Set(Nan::New<String>("statVFS").ToLocalChecked(), Nan::New<FunctionTemplate>(StatVFS)->GetFunction(Nan::GetCurrentContext()).ToLocalChecked());
 
 #ifndef _WIN32
   f_namemax_symbol.Reset(Nan::New<String>("f_namemax").ToLocalChecked());
@@ -611,5 +663,5 @@ NAN_MODULE_INIT(init)
 }
 
 #if NODE_MODULE_VERSION > 1
-  NODE_MODULE(fs_ext, init)
+NODE_MODULE(fs_ext, init)
 #endif
